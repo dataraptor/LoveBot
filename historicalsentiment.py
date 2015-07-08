@@ -1,22 +1,54 @@
+#!/usr/bin/env python
+
 import tweepy
+import numpy as np
+import pandas as pd
 import json
+import csv
 from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
 from tweepy import Stream
 from textblob import TextBlob
-from elasticsearch import Elasticsearch
 
 # import twitter keys and tokens
 from config import *
 
-# create instance of elasticsearch
-es = Elasticsearch()
-
+#Authenticate via Twitter
 auth = OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 api = tweepy.API(auth)
-query = raw_input("Twitter search term: ")
-for data in tweepy.Cursor(api.search, q=query).items():
+
+#Set the query variable
+query = "Congress"
+#query = raw_input("Twitter search term: ")
+
+#Initialize tweets matrix
+tweet_matrix = []
+
+#Retrieve historical tweets, parse for selected information and append vectors to matrix
+historical_tweets = tweepy.Cursor(api.search, q=query).items(10)
+for tweet in historical_tweets:
+    try:
+        if tweet.retweeted_status:
+            tweet_vector = [tweet.retweeted, tweet.author.screen_name, tweet.retweeted_status.text, tweet.coordinates]
+            print tweet.retweeted_status.text
+    except:
+        tweet_vector = [tweet.retweeted, tweet.author.screen_name, tweet.text, tweet.coordinates]
+        print tweet.text
+    tweet_matrix.append(tweet_vector)
+
+with open("tweets.csv", "wb") as f:
+    writer = csv.writer(f)
+    for row in tweet_matrix:
+        try:
+            writer.writerow(row)
+        except Exception, e:
+            pass
+
+def polarity(s):
+    blob = TextBlob(s)
+    print blob
+'''
     print data.text
     tweet = TextBlob(data.text)
 
@@ -32,13 +64,4 @@ for data in tweepy.Cursor(api.search, q=query).items():
 
     # output sentiment
     print sentiment
-
-    # add text and sentiment info to elasticsearch
-    es.index(index="sentiment",
-             doc_type="test-type",
-             body={"author": data.user.screen_name,
-                   "date": data.created_at,
-                   "message": data.text,
-                   "polarity": tweet.sentiment.polarity,
-                   "subjectivity": tweet.sentiment.subjectivity,
-                   "sentiment": sentiment})
+'''
