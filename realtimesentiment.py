@@ -38,7 +38,7 @@ class TweetStreamListener(StreamListener):
         print sentiment
 
         # add text and sentiment info to elasticsearch
-        es.index(index="sentiment",
+        es.index(index="betterment",
                  doc_type="test-type",
                  body={"author": dict_data["user"]["screen_name"],
                        "date": dict_data["created_at"],

@@ -1,84 +1,52 @@
-#!/usr/bin/env python
-
 import tweepy
-import numpy as np
-import pandas as pd
+import numpy
 import json
-import csv
 from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
 from tweepy import Stream
 from textblob import TextBlob
-import time
+from elasticsearch import Elasticsearch
 
 # import twitter keys and tokens
 from config import *
 
-#Authenticate via Twitter
-auth = OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_token, access_token_secret)
-api = tweepy.API(auth)
-
+es = Elasticsearch()
 #Set the query variable
-query = "@Betterment"
-#query = raw_input("Twitter search term: ")
 
-#Initialize tweets matrix
-tweet_matrix = []
+def twitter_scraper(query, i):
+    for data in tweepy.Cursor(api.search, q=query).items():
+        print data.text
+        text = TextBlob(data.text)
 
-def process_tweet(t):
-    return [t.created_at, t.user.screen_name, t.text, t.coordinates, t.is_quote_status]
+        polarity = text.sentiment.polarity
+        print polarity
 
-#Retrieve historical tweets, parse for selected information and append vectors to matrix
-raw_tweet_matrix = []
-processed_tweet_matrix = []
-tweets = tweepy.Cursor(api.search, q=query).items(10)
-for tweet in tweets:
-    raw_tweet_matrix.append(tweet)
-    processed_tweet_matrix.append(process_tweet(tweet))
+        # determine if sentiment is positive, negative, or neutral
+        if polarity < 0:
+            sentiment = "negative"
+        elif polarity > 0.05:
+            sentiment = "positive"
+        else:
+            sentiment = "neutral"
 
-'''
-historical_tweets = tweepy.Cursor(api.search, q=query).items(10)
-for tweet in historical_tweets:
-    try:
-        if tweet.retweeted_status:
-            tweet_vector = [tweet.retweeted, tweet.author.screen_name, tweet.retweeted_status.text, tweet.coordinates]
-            print tweet.retweeted_status.text
-    except:
-        tweet_vector = [tweet.retweeted, tweet.author.screen_name, tweet.text, tweet.coordinates]
-        print tweet.text
-    tweet_matrix.append(tweet_vector)
+        # output sentiment
+        print sentiment
 
-with open("tweets.csv", "wb") as f:
-    writer = csv.writer(f)
-    for row in tweet_matrix:
-        try:
-            writer.writerow(row)
-        except Exception, e:
-            pass
-'''
-def polarity(s):
-    blob = TextBlob(s)
-    return blob.sentiment.polarity
+        es.index(index=str(i),
+                     doc_type="test-type",
+                     body={"author": data.user.screen_name,
+                           "date": data.created_at,
+                           "message": data.text,
+                           "polarity": polarity,
+                           "subjectivity": text.sentiment.subjectivity,
+                           "sentiment": sentiment})
 
-def sentiment(s):
-    if polarity(s) < 0:
-        return "neg"
-    return "pos"
-'''
-    print data.text
-    tweet = TextBlob(data.text)
+if __name__ == '__main__':
+    #Authenticate via Twitter
+    auth = OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_token, access_token_secret)
+    api = tweepy.API(auth)
 
-    print tweet.sentiment.polarity
-
-    # determine if sentiment is positive, negative, or neutral
-    if tweet.sentiment.polarity < 0:
-        sentiment = "negative"
-    elif tweet.sentiment.polarity > 0.05:
-        sentiment = "positive"
-    else:
-        sentiment = "neutral"
-
-    # output sentiment
-    print sentiment
-'''
+    index = raw_input("Elasticsearch index: ")
+    term = raw_input("Twitter search term: ")
+    twitter_scraper(term, index)
