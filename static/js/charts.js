@@ -7,7 +7,7 @@ function makeGraphs(error, twitterJson){
 	//Parsing dates to have the same format
 	var dateFormat = d3.time.format("%Y-%m-%d");
 	tweets.forEach(function(d) {
-		time = d["date"]["$date"];
+		time = d["date"];
 		date = new Date(time);
 		d["date"] = dateFormat(date);
 	});
@@ -27,15 +27,16 @@ function makeGraphs(error, twitterJson){
 	//Defining date bounds
 	var minDate = dateDim.bottom(1)[0]["date"];
 	var maxDate = dateDim.top(1)[0]["date"];
-
+	console.log(minDate)
+	console.log(maxDate)
 	//Defining charts
 	var timeChart = dc.barChart("#time-chart");
-//	var sentimentChart = dc.pieChart('#sentiment-chart');
+	//var sentimentChart = dc.pieChart('#sentiment-chart');
 
 	timeChart
 	    .width(600)
 	    .height(160)
-	    .margins({top: 10, right: 50, bottom: 30, left: 50})
+	    .margins({top: 10, right: 5, bottom: 30, left: 5})
 	    .dimension(dateDim)
 	    .group(numTweetsByDate)
 	    .transitionDuration(500)
@@ -44,7 +45,7 @@ function makeGraphs(error, twitterJson){
 	    .xAxisLabel("Days")
 	    .yAxis().ticks(4);
 
-/*	sentimentChart
+	/*sentimentChart
 		.width(300)
 		.height(300)
 		.radius(80)
@@ -52,6 +53,6 @@ function makeGraphs(error, twitterJson){
 		.dimension(sentimentDim)
 		.group(numTweetsBySentiment)
 		.transitionDuration(500);
-*/
+	*/
 	dc.renderAll();
 };

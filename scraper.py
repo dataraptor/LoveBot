@@ -66,7 +66,7 @@ def scrape(query):
             "sentiment": sentiment
             })
     print "...done."
-    return json.dumps(tweets, default=json_util.default)
+    return tweets
 
 def add(data):
     print "Inserting into MongoDB..."
@@ -88,7 +88,6 @@ def clear():
 '''
 
 if __name__ == "__main__":
-    clear()
-    add(scrape("@Betterment"))
+    print(test())
 #    query = "@Betterment"
 #    scrape(query)
