@@ -1,6 +1,8 @@
 import tweepy
 import json
 import csv
+from datetime import datetime, date
+import time
 from bson import json_util
 from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
@@ -21,12 +23,31 @@ MONGODB_HOST = 'localhost'
 MONGODB_PORT = 27017
 DB_NAME = 'twittersentiment'
 COLLECTION_NAME = 'betterment'
+FIELDS = {
+    "author": True,
+    "message": True,
+    "date" : True,
+    "polarity": True,
+    "subjectivity": True,
+    "sentiment": True,
+    "_id" : False
+}
+
 tweets = []
+
+def test():
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collection = connection[DB_NAME][COLLECTION_NAME]
+    tweet = collection.find_one(projection=FIELDS)
+    #json_tweets = [json.dumps(tweet, default=json_util.default) for tweet in tweets]
+    #json_tweets = [json.loads(json_tweet, object_hook=json_util.object_hook) for json_tweet in json_tweets]
+    return tweet["date"]
 
 def scrape(query):
     print "Searching for matching tweets and analyzing sentiment..."
     for data in tweepy.Cursor(api.search, q=query).items():
         
+        date = time.mktime(data.created_at.timetuple()) * 1000 + data.created_at.microsecond/1000
         text = TextBlob(data.text)
         polarity = text.sentiment.polarity
 
@@ -38,15 +59,27 @@ def scrape(query):
 
         tweets.append({
             "author": data.user.screen_name,
-            "date": data.created_at,
+            "date": date,
             "message": data.text,
             "polarity": polarity,
             "subjectivity": text.sentiment.subjectivity,
             "sentiment": sentiment
             })
     print "...done."
-    return tweets
+    return json.dumps(tweets, default=json_util.default)
 
+def add(data):
+    print "Inserting into MongoDB..."
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collection = connection[DB_NAME][COLLECTION_NAME]
+    collection.insert(data)
+    print "...done."
+    connection.close()
+
+def clear():
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collection = connection[DB_NAME][COLLECTION_NAME]
+    collection.drop()
 '''def export_csv():
     print "Exporting to csv..."
     f = open('tweets.csv', 'w', newline = '')
@@ -55,5 +88,7 @@ def scrape(query):
 '''
 
 if __name__ == "__main__":
-    query = "@Betterment"
-    scrape(query)
+    clear()
+    add(scrape("@Betterment"))
+#    query = "@Betterment"
+#    scrape(query)

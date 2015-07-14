@@ -29,13 +29,13 @@ def index():
 def twittersentiment_betterment():
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collection = connection[DB_NAME][COLLECTION_NAME]
-    tweets = collection.find()
-    json_tweets = []
+    tweets = collection.find(projection=FIELDS)
+    list_tweets = []
     for tweet in tweets:
-        json_tweets.append(tweet)
-    json_tweets = json.dumps(json_tweets, default = json_util.default)
+        list_tweets.append(tweet)
+    json_tweets = json.dumps(list_tweets, default = json_util.default)
     connection.close()
     return json_tweets
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port = 5000, debug = True)
+    app.run(host='127.0.0.1', port = 5000, debug = True)
