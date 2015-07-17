@@ -47,7 +47,7 @@ def scrape(query):
     print "Searching for matching tweets and analyzing sentiment..."
     for data in tweepy.Cursor(api.search, q=query).items():
         
-        date = time.mktime(data.created_at.timetuple()) * 1000 + data.created_at.microsecond/1000
+        date = data.created_at.strftime("%Y-%m-%d")
         text = TextBlob(data.text)
         polarity = text.sentiment.polarity
 
@@ -88,6 +88,7 @@ def clear():
 '''
 
 if __name__ == "__main__":
-    print(test())
+    clear()
+    add(scrape("@Betterment"))
 #    query = "@Betterment"
 #    scrape(query)

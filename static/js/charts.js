@@ -7,9 +7,7 @@ function makeGraphs(error, twitterJson){
 	//Parsing dates to have the same format
 	var dateFormat = d3.time.format("%Y-%m-%d");
 	tweets.forEach(function(d) {
-		time = d["date"];
-		date = new Date(time);
-		d["date"] = dateFormat(date);
+		d["date"] = dateFormat.parse(d["date"]);
 	});
 	
 	//Instantiating crossfilter
@@ -17,42 +15,87 @@ function makeGraphs(error, twitterJson){
 
 	//Defining dimensions
 	var dateDim = ndx.dimension(function(d) { return d["date"]; });
+	var polarityDim = ndx.dimension(function(d) { return d["polarity"]; });
 	var sentimentDim = ndx.dimension(function(d) { return d["sentiment"]; });
 
 	//Defining data groups
 	var all = ndx.groupAll();
 	var numTweetsByDate = dateDim.group();
+	var numTweetsByPolarity = polarityDim.group();
 	var numTweetsBySentiment = sentimentDim.group();
 
 	//Defining date bounds
 	var minDate = dateDim.bottom(1)[0]["date"];
 	var maxDate = dateDim.top(1)[0]["date"];
-	console.log(minDate)
-	console.log(maxDate)
 	//Defining charts
 	var timeChart = dc.barChart("#time-chart");
-	//var sentimentChart = dc.pieChart('#sentiment-chart');
+	var sentimentChart = dc.pieChart('#sentiment-chart');
+	var polarityChart = dc.barChart("#polarity-chart");
+	var tweetsTable = dc.dataTable("#tweets-table");
+	var totalTweetsND = dc.numberDisplay("#total-tweets-nd");
+
+
+	totalTweetsND
+		.formatNumber(d3.format("d"))
+		.valueAccessor(function(d) { return d; })
+		.group(all);
 
 	timeChart
-	    .width(600)
-	    .height(160)
-	    .margins({top: 10, right: 5, bottom: 30, left: 5})
+	    .width(500)
+	    .height(350)
+	    .margins({top: 30, right: 50, bottom: 30, left: 50})
 	    .dimension(dateDim)
 	    .group(numTweetsByDate)
 	    .transitionDuration(500)
 	    .x(d3.time.scale().domain([minDate, maxDate]))
 	    .elasticY(true)
-	    .xAxisLabel("Days")
 	    .yAxis().ticks(4);
 
-	/*sentimentChart
-		.width(300)
-		.height(300)
-		.radius(80)
-		.innerRadius(30)
-		.dimension(sentimentDim)
-		.group(numTweetsBySentiment)
-		.transitionDuration(500);
-	*/
+	polarityChart
+		.width(550)
+	    .height(350)
+	    .margins({top: 30, right: 50, bottom: 30, left: 50})
+	    .dimension(polarityDim)
+	    .group(numTweetsByPolarity)
+	    .transitionDuration(500)
+	    .x(d3.scale.linear().domain([-1,1]))
+	    .elasticY(true)
+	    .yAxis().ticks(4);
+
+	sentimentChart
+		.width(350)
+    	.height(350)
+    	.dimension(sentimentDim)
+    	.group(numTweetsBySentiment)
+    	.innerRadius(120)
+    	.label(function(d) {
+    		return d.key + ' (' + d.value+')';
+    	});
+
+    tweetsTable
+    	.dimension(dateDim)
+    	.group(function(d) { return ""; })
+    	.size(tweets.length)
+    	.columns([
+    		//function(d) { return d["date"]; },
+    		function(d) { return d["author"]; },
+    		function(d) { return d["message"]; },
+    		function(d) { return d["sentiment"]}
+    	]).sortBy(function(d) {
+    		return d["date"];
+    	})
+    	.order(d3.descending)
+    	.on("renderlet", function(chart){
+    		chart.selectAll(tweetsTable.style('background-color',
+    			function(d){
+    				if (d["sentiment"] = "positive") {
+    					return "LightSkyBlue";
+    				}
+    				else {
+    					return "PaleVioletRed";
+    				}
+    			}))
+    	});
+	
 	dc.renderAll();
 };
